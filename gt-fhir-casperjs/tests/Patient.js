@@ -82,9 +82,9 @@ casper.test.begin('Patient resource test', function(test) {
         // require('utils').dump(patientVerify);
         test.assert(1 == patientVerify.issue.length, 'Verify: 1 issue returned');
         test.assert('Validation succeeded' == patientVerify.issue[0].details, 'Verify: Validation succeeded');
-        if(!(1 == patientVerify.issue.length && 'Validation succeeded' == patientVerify.issue[0].details)) {
-          // Dump the verification issue(s) if it's not perfect
-          require('utils').dump(patientVerify.issue);
+        if (!(1 == patientVerify.issue.length && 'Validation succeeded' == patientVerify.issue[0].details)) {
+            // Dump the verification issue(s) if it's not perfect
+            require('utils').dump(patientVerify.issue);
         }
     });
 
@@ -96,7 +96,7 @@ casper.test.begin('Patient resource test', function(test) {
             '#resource-create-body': JSON.stringify(patientInsert)
         }, false);
         // require('utils').dump(patientInsert);
-        // this.echo(JSON.stringify(patientInsert));
+        this.echo(JSON.stringify(patientInsert));
 
         casper.captureSelector('patient-create-entered.png', '#tab-otheractions > div');
         casper.click('#resource-create-btn');
@@ -112,17 +112,30 @@ casper.test.begin('Patient resource test', function(test) {
     });
     // Patient Create Response
     casper.then(function() {
-        casper.capture('patient-create-result.png');
         test.assertSelectorHasText(
             '#resultTable > tbody > tr:nth-child(1) > td:nth-child(2)',
             'HTTP/1.1 200 OK',
             'Create: HTTP Code 200'
         );
-        var resultJSON = casper.evaluate(function() {
+    });
+    casper.then(function() {
+        var resultType = casper.evaluate(function() {
+            return $("#resultTable .headerName:contains('Content-Type') + .headerValue ").text();
+        });
+        var resultRaw = casper.evaluate(function() {
             return $('#resultBodyActualPre').text();
         });
-        var patientCreate = JSON.parse(resultJSON);
-        require('utils').dump(patientCreate);
+        // casper.echo(resultRaw);
+        var patientCreate = null;
+        if (0 === resultType.lastIndexOf('application/json', 0)) {
+            test.pass('Create: Result content type application/json');
+            patientCreate = JSON.parse(resultRaw);
+            require('utils').dump(patientCreate);
+        } else if (0 === resultType.lastIndexOf('text/plain', 0)) {
+            test.fail('Create: Result content type text/plain. Raw response: ' + resultRaw);
+        } else {
+            test.fail('Create: Result content type unexpected: ' + resultType);
+        }
     });
 
     // Wrap it up
